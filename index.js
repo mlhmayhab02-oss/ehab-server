@@ -1,30 +1,77 @@
+const express = require("express");
+const mongoose = require("mongoose");
 
-const express = require("express"); // استيراد مكتبة Express
-const app = express(); // إنشاء تطبيق Express جديد
-const port = process.env.PORT || 3000; // تحديد المنفذ الذي سيعمل عليه السيرفر (3000 بشكل افتراضي)
+const app = express();
+const port = process.env.PORT || 3000;
 
-// لتعامل السيرفر مع البيانات المرسلة عبر POST بشكل صحيح
+// قراءة البيانات
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// إعداد نقطة النهاية لتسجيل الدخول عبر POST
-app.post("/login", (req, res) => {
-    const { username, password } = req.body; // استلام اسم المستخدم وكلمة المرور من التطبيق
+// 🔥 رابط MongoDB (عدله إذا غيرت الباسورد)
+const MONGO_URI = "mongodb+srv://ehab:12345678910@cluster0.xm4kwks.mongodb.net/test";
 
-    // التحقق من اسم المستخدم وكلمة المرور
-    if (username === "ehab" && password === "1234") {
-        res.send("success"); // إذا كانت البيانات صحيحة، يتم إرسال "success"
-    } else {
-        res.send("error"); // إذا كانت البيانات خاطئة، يتم إرسال "error"
+// اتصال بقاعدة البيانات
+mongoose.connect(MONGO_URI)
+.then(() => console.log("✅ MongoDB Connected"))
+.catch(err => console.log("❌ Error:", err));
+
+// نموذج المستخدم
+const User = mongoose.model("User", {
+    username: String,
+    password: String
+});
+
+
+// ✅ تسجيل حساب جديد
+app.post("/register", async (req, res) => {
+    const { username, password } = req.body;
+
+    try {
+        // تحقق إذا المستخدم موجود
+        const existingUser = await User.findOne({ username });
+
+        if (existingUser) {
+            return res.send("exists");
+        }
+
+        const newUser = new User({ username, password });
+        await newUser.save();
+
+        res.send("success");
+
+    } catch (err) {
+        res.send("error");
     }
 });
 
-// إعداد نقطة النهاية الأساسية للسيرفر (اختبار أن السيرفر يعمل)
-app.get("/", (req, res) => {
-    res.send("Server is working 🚀"); // إرسال رسالة بسيطة لتأكيد أن السيرفر يعمل
+
+// ✅ تسجيل الدخول
+app.post("/login", async (req, res) => {
+    const { username, password } = req.body;
+
+    try {
+        const user = await User.findOne({ username, password });
+
+        if (user) {
+            res.send("success");
+        } else {
+            res.send("error");
+        }
+
+    } catch (err) {
+        res.send("error");
+    }
 });
 
-// تشغيل السيرفر على المنفذ المحدد
+
+// اختبار السيرفر
+app.get("/", (req, res) => {
+    res.send("Server is working 🚀");
+});
+
+
+// تشغيل السيرفر
 app.listen(port, () => {
-    console.log(`Server is running at http://localhost:${port}`);
+    console.log(`Server running on port ${port}`);
 });
