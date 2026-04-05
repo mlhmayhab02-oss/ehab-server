@@ -9,7 +9,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // 🔥 رابط MongoDB (عدله إذا غيرت الباسورد)
-const MONGO_URI = "mongodb+srv://ehab:123456@cluster0.xm4kwks.mongodb.net/test";
+const MONGO_URI = "mongodb+srv://ehab:ehab123456@cluster0.xm4kwks.mongodb.net/test";
 
 // اتصال بقاعدة البيانات
 mongoose.connect(MONGO_URI)
