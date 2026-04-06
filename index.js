@@ -8,7 +8,7 @@ const port = process.env.PORT || 3000;
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// 🔥 رابط MongoDB (عدله إذا غيرت الباسورد)
+// 🔥 رابط MongoDB
 const MONGO_URI = "mongodb+srv://ehab:ehab123456@cluster0.xm4kwks.mongodb.net/test";
 
 // اتصال بقاعدة البيانات
@@ -22,13 +22,19 @@ const User = mongoose.model("User", {
     password: String
 });
 
+// ✅ نموذج الرسائل (جديد 🔥)
+const Message = mongoose.model("Message", {
+    room: String,
+    msg: String,
+    time: { type: Date, default: Date.now }
+});
 
-// ✅ تسجيل حساب جديد
+
+// ✅ تسجيل حساب جديد (كما هو)
 app.post("/register", async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        // تحقق إذا المستخدم موجود
         const existingUser = await User.findOne({ username });
 
         if (existingUser) {
@@ -46,7 +52,7 @@ app.post("/register", async (req, res) => {
 });
 
 
-// ✅ تسجيل الدخول
+// ✅ تسجيل الدخول (كما هو)
 app.post("/login", async (req, res) => {
     const { username, password } = req.body;
 
@@ -65,7 +71,40 @@ app.post("/login", async (req, res) => {
 });
 
 
-// اختبار السيرفر
+// 🔥 إرسال رسالة (جديد)
+app.post("/send", async (req, res) => {
+    const { room, msg } = req.body;
+
+    try {
+        const newMsg = new Message({ room, msg });
+        await newMsg.save();
+
+        res.send("sent");
+
+    } catch (err) {
+        res.send("error");
+    }
+});
+
+
+// 🔥 جلب الرسائل (جديد)
+app.get("/messages", async (req, res) => {
+    const room = req.query.room;
+
+    try {
+        const msgs = await Message.find({ room }).sort({ time: 1 });
+
+        const result = msgs.map(m => m.msg).join("\n");
+
+        res.send(result);
+
+    } catch (err) {
+        res.send("error");
+    }
+});
+
+
+// اختبار السيرفر (كما هو)
 app.get("/", (req, res) => {
     res.send("Server is working 🚀");
 });
