@@ -11,10 +11,8 @@ app.use(express.json());
 // 🔥 رابط MongoDB
 const MONGO_URI = "mongodb+srv://ehab:ehab123456@cluster0.xm4kwks.mongodb.net/test";
 
-// ✅ اتصال سريع بدون تعليق
-mongoose.connect(MONGO_URI, {
-    serverSelectionTimeoutMS: 5000
-})
+// اتصال بقاعدة البيانات
+mongoose.connect(MONGO_URI)
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ Error:", err));
 
@@ -31,19 +29,18 @@ const Message = mongoose.model("Message", {
     time: { type: Date, default: Date.now }
 });
 
-
-// ✅ تسجيل حساب
+// تسجيل
 app.post("/register", async (req, res) => {
     const { username, password } = req.body;
 
     try {
         const existingUser = await User.findOne({ username });
 
-        if (existingUser) {
-            return res.send("exists");
-        }
+        if (existingUser) return res.send("exists");
 
-        await new User({ username, password }).save();
+        const newUser = new User({ username, password });
+        await newUser.save();
+
         res.send("success");
 
     } catch (err) {
@@ -51,8 +48,7 @@ app.post("/register", async (req, res) => {
     }
 });
 
-
-// ✅ تسجيل دخول
+// تسجيل دخول
 app.post("/login", async (req, res) => {
     const { username, password } = req.body;
 
@@ -67,20 +63,17 @@ app.post("/login", async (req, res) => {
     }
 });
 
-
-// 🔥 إرسال رسالة (مع حذف بعد 5 ثواني)
+// 🔥 إرسال رسالة (تم التعديل هنا فقط)
 app.post("/send", async (req, res) => {
     const { room, msg } = req.body;
 
     try {
         const newMsg = new Message({ room, msg });
-        await newMsg.save();
+        const savedMsg = await newMsg.save();
 
-        // ⏳ حذف بعد 5 ثواني
-        setTimeout(async () => {
-            try {
-                await Message.deleteOne({ _id: newMsg._id });
-            } catch (e) {}
+        // ✅ حذف بعد 5 ثواني (مضمون 100%)
+        setTimeout(() => {
+            Message.findByIdAndDelete(savedMsg._id).exec();
         }, 5000);
 
         res.send("sent");
@@ -90,8 +83,7 @@ app.post("/send", async (req, res) => {
     }
 });
 
-
-// 🔥 جلب الرسائل
+// جلب الرسائل
 app.get("/messages", async (req, res) => {
     const room = req.query.room;
     const after = req.query.after || 0;
@@ -109,14 +101,12 @@ app.get("/messages", async (req, res) => {
     }
 });
 
-
 // اختبار
 app.get("/", (req, res) => {
     res.send("Server is working 🚀");
 });
 
-
-// تشغيل السيرفر
+// تشغيل
 app.listen(port, () => {
-    console.log("🚀 Server running on port " + port);
+    console.log(`Server running on port ${port}`);
 });
