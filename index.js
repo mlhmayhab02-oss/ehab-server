@@ -71,13 +71,20 @@ app.post("/login", async (req, res) => {
 });
 
 
-// 🔥 إرسال رسالة
+// 🔥 إرسال رسالة (تم تعديلها فقط)
 app.post("/send", async (req, res) => {
     const { room, msg } = req.body;
 
     try {
         const newMsg = new Message({ room, msg });
         await newMsg.save();
+
+        // ⏳ حذف الرسالة بعد 5 ثواني
+        setTimeout(async () => {
+            try {
+                await Message.deleteOne({ _id: newMsg._id });
+            } catch (e) {}
+        }, 5000);
 
         res.send("sent");
 
@@ -87,7 +94,7 @@ app.post("/send", async (req, res) => {
 });
 
 
-// 🔥🔥🔥 جلب الرسائل (المعدل الصح)
+// 🔥🔥🔥 جلب الرسائل (كما هو بدون تغيير)
 app.get("/messages", async (req, res) => {
     const room = req.query.room;
     const after = req.query.after || 0;
@@ -98,7 +105,7 @@ app.get("/messages", async (req, res) => {
             time: { $gt: new Date(parseInt(after)) }
         }).sort({ time: 1 });
 
-        res.json(msgs); // 🔥 يرجع JSON
+        res.json(msgs);
 
     } catch (err) {
         res.send("error");
