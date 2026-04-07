@@ -4,6 +4,9 @@ const mongoose = require("mongoose");
 const app = express();
 const port = process.env.PORT || 3000;
 
+// مهم جداً لـ Render
+app.set("trust proxy", 1);
+
 // قراءة البيانات
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -11,8 +14,11 @@ app.use(express.json());
 // 🔥 رابط MongoDB
 const MONGO_URI = "mongodb+srv://ehab:ehab123456@cluster0.xm4kwks.mongodb.net/test";
 
-// اتصال بقاعدة البيانات
-mongoose.connect(MONGO_URI)
+// اتصال سريع ومستقر
+mongoose.connect(MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ Error:", err));
 
@@ -31,82 +37,81 @@ const Message = mongoose.model("Message", {
 
 // تسجيل
 app.post("/register", async (req, res) => {
-    const { username, password } = req.body;
-
     try {
-        const existingUser = await User.findOne({ username });
+        const { username, password } = req.body;
 
+        const existingUser = await User.findOne({ username });
         if (existingUser) return res.send("exists");
 
-        const newUser = new User({ username, password });
-        await newUser.save();
-
+        await new User({ username, password }).save();
         res.send("success");
 
-    } catch (err) {
+    } catch {
         res.send("error");
     }
 });
 
 // تسجيل دخول
 app.post("/login", async (req, res) => {
-    const { username, password } = req.body;
-
     try {
+        const { username, password } = req.body;
+
         const user = await User.findOne({ username, password });
+        res.send(user ? "success" : "error");
 
-        if (user) res.send("success");
-        else res.send("error");
-
-    } catch (err) {
+    } catch {
         res.send("error");
     }
 });
 
-// 🔥 إرسال رسالة (تم التعديل هنا فقط)
+// 🔥 إرسال رسالة + حذف تلقائي بعد 5 ثواني
 app.post("/send", async (req, res) => {
-    const { room, msg } = req.body;
-
     try {
-        const newMsg = new Message({ room, msg });
-        const savedMsg = await newMsg.save();
+        const { room, msg } = req.body;
 
-        // ✅ حذف بعد 5 ثواني (مضمون 100%)
+        const savedMsg = await new Message({ room, msg }).save();
+
+        // حذف بعد 5 ثواني بدون تعليق السيرفر
         setTimeout(() => {
             Message.findByIdAndDelete(savedMsg._id).exec();
         }, 5000);
 
         res.send("sent");
 
-    } catch (err) {
+    } catch {
         res.send("error");
     }
 });
 
-// جلب الرسائل
+// 🔥 جلب الرسائل (سريع جداً)
 app.get("/messages", async (req, res) => {
-    const room = req.query.room;
-    const after = req.query.after || 0;
-
     try {
+        const room = req.query.room;
+        const after = parseInt(req.query.after || "0");
+
         const msgs = await Message.find({
             room: room,
-            time: { $gt: new Date(parseInt(after)) }
-        }).sort({ time: 1 });
+            time: { $gt: new Date(after) }
+        }).sort({ time: 1 }).lean(); // 🔥 lean = أسرع
 
         res.json(msgs);
 
-    } catch (err) {
+    } catch {
         res.send("error");
     }
 });
 
-// اختبار
+// منع النوم (اختياري لكن قوي)
+app.get("/ping", (req, res) => {
+    res.send("pong");
+});
+
+// الصفحة الرئيسية
 app.get("/", (req, res) => {
     res.send("Server is working 🚀");
 });
 
 // تشغيل
 app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+    console.log("🚀 Server running on port " + port);
 });
