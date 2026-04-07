@@ -4,17 +4,13 @@ const mongoose = require("mongoose");
 const app = express();
 const port = process.env.PORT || 3000;
 
-// مهم جداً لـ Render
-app.set("trust proxy", 1);
-
-// قراءة البيانات
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // 🔥 رابط MongoDB
 const MONGO_URI = "mongodb+srv://ehab:ehab123456@cluster0.xm4kwks.mongodb.net/test";
 
-// اتصال سريع ومستقر
+// اتصال
 mongoose.connect(MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
@@ -28,11 +24,11 @@ const User = mongoose.model("User", {
     password: String
 });
 
-// نموذج الرسائل
+// 🔥 نموذج الرسائل (التعديل هنا فقط)
 const Message = mongoose.model("Message", {
     room: String,
     msg: String,
-    time: { type: Date, default: Date.now }
+    time: { type: Date, default: Date.now, expires: 5 } // 🔥 حذف بعد 5 ثواني
 });
 
 // تسجيل
@@ -64,17 +60,12 @@ app.post("/login", async (req, res) => {
     }
 });
 
-// 🔥 إرسال رسالة + حذف تلقائي بعد 5 ثواني
+// 🔥 إرسال رسالة (بدون setTimeout)
 app.post("/send", async (req, res) => {
     try {
         const { room, msg } = req.body;
 
-        const savedMsg = await new Message({ room, msg }).save();
-
-        // حذف بعد 5 ثواني بدون تعليق السيرفر
-        setTimeout(() => {
-            Message.findByIdAndDelete(savedMsg._id).exec();
-        }, 5000);
+        await new Message({ room, msg }).save();
 
         res.send("sent");
 
@@ -83,7 +74,7 @@ app.post("/send", async (req, res) => {
     }
 });
 
-// 🔥 جلب الرسائل (سريع جداً)
+// جلب الرسائل
 app.get("/messages", async (req, res) => {
     try {
         const room = req.query.room;
@@ -92,7 +83,7 @@ app.get("/messages", async (req, res) => {
         const msgs = await Message.find({
             room: room,
             time: { $gt: new Date(after) }
-        }).sort({ time: 1 }).lean(); // 🔥 lean = أسرع
+        }).sort({ time: 1 }).lean();
 
         res.json(msgs);
 
@@ -101,12 +92,7 @@ app.get("/messages", async (req, res) => {
     }
 });
 
-// منع النوم (اختياري لكن قوي)
-app.get("/ping", (req, res) => {
-    res.send("pong");
-});
-
-// الصفحة الرئيسية
+// اختبار
 app.get("/", (req, res) => {
     res.send("Server is working 🚀");
 });
