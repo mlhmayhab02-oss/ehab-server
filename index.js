@@ -11,8 +11,10 @@ app.use(express.json());
 // 🔥 رابط MongoDB
 const MONGO_URI = "mongodb+srv://ehab:ehab123456@cluster0.xm4kwks.mongodb.net/test";
 
-// اتصال بقاعدة البيانات
-mongoose.connect(MONGO_URI)
+// ✅ اتصال سريع بدون تعليق
+mongoose.connect(MONGO_URI, {
+    serverSelectionTimeoutMS: 5000
+})
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ Error:", err));
 
@@ -22,7 +24,7 @@ const User = mongoose.model("User", {
     password: String
 });
 
-// ✅ نموذج الرسائل
+// نموذج الرسائل
 const Message = mongoose.model("Message", {
     room: String,
     msg: String,
@@ -30,7 +32,7 @@ const Message = mongoose.model("Message", {
 });
 
 
-// ✅ تسجيل حساب جديد
+// ✅ تسجيل حساب
 app.post("/register", async (req, res) => {
     const { username, password } = req.body;
 
@@ -41,9 +43,7 @@ app.post("/register", async (req, res) => {
             return res.send("exists");
         }
 
-        const newUser = new User({ username, password });
-        await newUser.save();
-
+        await new User({ username, password }).save();
         res.send("success");
 
     } catch (err) {
@@ -52,18 +52,15 @@ app.post("/register", async (req, res) => {
 });
 
 
-// ✅ تسجيل الدخول
+// ✅ تسجيل دخول
 app.post("/login", async (req, res) => {
     const { username, password } = req.body;
 
     try {
         const user = await User.findOne({ username, password });
 
-        if (user) {
-            res.send("success");
-        } else {
-            res.send("error");
-        }
+        if (user) res.send("success");
+        else res.send("error");
 
     } catch (err) {
         res.send("error");
@@ -71,7 +68,7 @@ app.post("/login", async (req, res) => {
 });
 
 
-// 🔥 إرسال رسالة (تم تعديلها فقط)
+// 🔥 إرسال رسالة (مع حذف بعد 5 ثواني)
 app.post("/send", async (req, res) => {
     const { room, msg } = req.body;
 
@@ -79,7 +76,7 @@ app.post("/send", async (req, res) => {
         const newMsg = new Message({ room, msg });
         await newMsg.save();
 
-        // ⏳ حذف الرسالة بعد 5 ثواني
+        // ⏳ حذف بعد 5 ثواني
         setTimeout(async () => {
             try {
                 await Message.deleteOne({ _id: newMsg._id });
@@ -94,7 +91,7 @@ app.post("/send", async (req, res) => {
 });
 
 
-// 🔥🔥🔥 جلب الرسائل (كما هو بدون تغيير)
+// 🔥 جلب الرسائل
 app.get("/messages", async (req, res) => {
     const room = req.query.room;
     const after = req.query.after || 0;
@@ -113,7 +110,7 @@ app.get("/messages", async (req, res) => {
 });
 
 
-// اختبار السيرفر
+// اختبار
 app.get("/", (req, res) => {
     res.send("Server is working 🚀");
 });
@@ -121,5 +118,5 @@ app.get("/", (req, res) => {
 
 // تشغيل السيرفر
 app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+    console.log("🚀 Server running on port " + port);
 });
