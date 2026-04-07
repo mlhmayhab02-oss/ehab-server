@@ -24,11 +24,11 @@ const User = mongoose.model("User", {
     password: String
 });
 
-// 🔥 نموذج الرسائل (التعديل هنا فقط)
+// 🔥 نموذج الرسائل (نخليه كما هو + TTL احتياطي)
 const Message = mongoose.model("Message", {
     room: String,
     msg: String,
-    time: { type: Date, default: Date.now, expires: 5 } // 🔥 حذف بعد 5 ثواني
+    time: { type: Date, default: Date.now, expires: 5 } // يبقى كاحتياط
 });
 
 // تسجيل
@@ -60,12 +60,19 @@ app.post("/login", async (req, res) => {
     }
 });
 
-// 🔥 إرسال رسالة (بدون setTimeout)
+// 🔥 إرسال رسالة + حذف فوري
 app.post("/send", async (req, res) => {
     try {
         const { room, msg } = req.body;
 
-        await new Message({ room, msg }).save();
+        const message = await new Message({ room, msg }).save();
+
+        // 💣 حذف سريع جداً (1 ثانية)
+        setTimeout(async () => {
+            try {
+                await Message.deleteOne({ _id: message._id });
+            } catch (e) {}
+        }, 1000);
 
         res.send("sent");
 
