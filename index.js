@@ -18,17 +18,17 @@ mongoose.connect(MONGO_URI, {
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ Error:", err));
 
-// نموذج المستخدم
+// 👤 المستخدم
 const User = mongoose.model("User", {
     username: String,
     password: String
 });
 
-// 🔥 نموذج الرسائل (نخليه كما هو + TTL احتياطي)
+// 💬 الرسائل (💣 بدون حذف نهائياً)
 const Message = mongoose.model("Message", {
     room: String,
     msg: String,
-    time: { type: Date, default: Date.now, expires: 5 } // يبقى كاحتياط
+    time: { type: Date, default: Date.now }
 });
 
 // تسجيل
@@ -60,19 +60,12 @@ app.post("/login", async (req, res) => {
     }
 });
 
-// 🔥 إرسال رسالة + حذف فوري
+// 💬 إرسال رسالة
 app.post("/send", async (req, res) => {
     try {
         const { room, msg } = req.body;
 
-        const message = await new Message({ room, msg }).save();
-
-        // 💣 حذف سريع جداً (1 ثانية)
-        setTimeout(async () => {
-            try {
-                await Message.deleteOne({ _id: message._id });
-            } catch (e) {}
-        }, 1000);
+        await new Message({ room, msg }).save();
 
         res.send("sent");
 
@@ -81,7 +74,7 @@ app.post("/send", async (req, res) => {
     }
 });
 
-// جلب الرسائل
+// 📥 جلب الرسائل (يدعم after)
 app.get("/messages", async (req, res) => {
     try {
         const room = req.query.room;
