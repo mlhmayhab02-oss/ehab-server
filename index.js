@@ -22,7 +22,7 @@ const User = mongoose.model("User", {
     password: String
 });
 
-// ✅ نموذج الرسائل (جديد 🔥)
+// ✅ نموذج الرسائل
 const Message = mongoose.model("Message", {
     room: String,
     msg: String,
@@ -30,7 +30,7 @@ const Message = mongoose.model("Message", {
 });
 
 
-// ✅ تسجيل حساب جديد (كما هو)
+// ✅ تسجيل حساب جديد
 app.post("/register", async (req, res) => {
     const { username, password } = req.body;
 
@@ -52,7 +52,7 @@ app.post("/register", async (req, res) => {
 });
 
 
-// ✅ تسجيل الدخول (كما هو)
+// ✅ تسجيل الدخول
 app.post("/login", async (req, res) => {
     const { username, password } = req.body;
 
@@ -71,7 +71,7 @@ app.post("/login", async (req, res) => {
 });
 
 
-// 🔥 إرسال رسالة (جديد)
+// 🔥 إرسال رسالة
 app.post("/send", async (req, res) => {
     const { room, msg } = req.body;
 
@@ -87,16 +87,18 @@ app.post("/send", async (req, res) => {
 });
 
 
-// 🔥 جلب الرسائل (جديد)
+// 🔥🔥🔥 جلب الرسائل (المعدل الصح)
 app.get("/messages", async (req, res) => {
     const room = req.query.room;
+    const after = req.query.after || 0;
 
     try {
-        const msgs = await Message.find({ room }).sort({ time: 1 });
+        const msgs = await Message.find({
+            room: room,
+            time: { $gt: new Date(parseInt(after)) }
+        }).sort({ time: 1 });
 
-        const result = msgs.map(m => m.msg).join("\n");
-
-        res.send(result);
+        res.json(msgs); // 🔥 يرجع JSON
 
     } catch (err) {
         res.send("error");
@@ -104,7 +106,7 @@ app.get("/messages", async (req, res) => {
 });
 
 
-// اختبار السيرفر (كما هو)
+// اختبار السيرفر
 app.get("/", (req, res) => {
     res.send("Server is working 🚀");
 });
