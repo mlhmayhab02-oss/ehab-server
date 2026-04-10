@@ -4,100 +4,67 @@ const mongoose = require("mongoose");
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(express.urlencoded({ extended: true }));
+// لكي يستطيع السيرفر قراءة البيانات القادمة من Sketchware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// 🔥 رابط MongoDB
+// اتصال بقاعدة البيانات MongoDB
 const MONGO_URI = "mongodb+srv://ehab:ehab123456@cluster0.xm4kwks.mongodb.net/test";
 
-// اتصال
-mongoose.connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-})
-.then(() => console.log("✅ MongoDB Connected"))
-.catch(err => console.log("❌ Error:", err));
+mongoose.connect(MONGO_URI)
+    .then(() => console.log("✅ المتصل بقاعدة البيانات بنجاح"))
+    .catch(err => console.log("❌ فشل الاتصال:", err));
 
-// 👤 المستخدم
+// تعريف شكل بيانات المستخدم
 const User = mongoose.model("User", {
-    username: String,
-    password: String
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true }
 });
 
-// 💬 الرسائل (💣 بدون حذف نهائياً)
-const Message = mongoose.model("Message", {
-    room: String,
-    msg: String,
-    time: { type: Date, default: Date.now }
-});
-
-// تسجيل
+// --- [ 1. مسار إنشاء الحساب ] ---
 app.post("/register", async (req, res) => {
     try {
         const { username, password } = req.body;
 
+        // التأكد إذا كان المستخدم موجوداً
         const existingUser = await User.findOne({ username });
-        if (existingUser) return res.send("exists");
+        if (existingUser) {
+            return res.send("exists"); // سيرد بكلمة exists
+        }
 
-        await new User({ username, password }).save();
-        res.send("success");
+        const newUser = new User({ username, password });
+        await newUser.save();
+        res.send("success"); // سيرد بكلمة success
 
-    } catch {
-        res.send("error");
+    } catch (error) {
+        res.status(500).send("error");
     }
 });
 
-// تسجيل دخول
+// --- [ 2. مسار تسجيل الدخول ] ---
 app.post("/login", async (req, res) => {
     try {
         const { username, password } = req.body;
 
+        // البحث عن المستخدم ببياناته
         const user = await User.findOne({ username, password });
-        res.send(user ? "success" : "error");
+        
+        if (user) {
+            res.send("success"); // بيانات صحيحة
+        } else {
+            res.send("error"); // بيانات خاطئة
+        }
 
-    } catch {
-        res.send("error");
+    } catch (error) {
+        res.status(500).send("error");
     }
 });
 
-// 💬 إرسال رسالة
-app.post("/send", async (req, res) => {
-    try {
-        const { room, msg } = req.body;
-
-        await new Message({ room, msg }).save();
-
-        res.send("sent");
-
-    } catch {
-        res.send("error");
-    }
-});
-
-// 📥 جلب الرسائل (يدعم after)
-app.get("/messages", async (req, res) => {
-    try {
-        const room = req.query.room;
-        const after = parseInt(req.query.after || "0");
-
-        const msgs = await Message.find({
-            room: room,
-            time: { $gt: new Date(after) }
-        }).sort({ time: 1 }).lean();
-
-        res.json(msgs);
-
-    } catch {
-        res.send("error");
-    }
-});
-
-// اختبار
+// اختبار عمل السيرفر
 app.get("/", (req, res) => {
-    res.send("Server is working 🚀");
+    res.send("Server is running! 🚀");
 });
 
-// تشغيل
 app.listen(port, () => {
-    console.log("🚀 Server running on port " + port);
+    console.log(`🚀 السيرفر يعمل على المنفذ ${port}`);
 });
