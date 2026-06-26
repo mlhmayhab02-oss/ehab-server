@@ -5,10 +5,6 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
-/* ======================
-   MIDDLEWARE
-====================== */
-
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -18,17 +14,17 @@ app.use(cors({
 app.use(express.json());
 
 /* ======================
-   MONGO DB CONNECTION
+   MONGO DB
 ====================== */
 
-const mongoURI = "mongodb+srv://mlhmayhab02_db_user:w1PhzmZrY7G1HEG7@cluster0.ggs1zue.mongodb.net/snowchat?retryWrites=true&w=majority&appName=Cluster0";
+const mongoURI = "mongodb+srv://mlhmayhab02_db_user:miPbzmZrX7G1HEO7@cluster0.gga5zue.mongodb.net/snowchat?retryWrites=true&w=majority&appName=Cluster0";
 
 mongoose.connect(mongoURI)
-  .then(() => console.log('✅ تم الاتصال بقاعدة البيانات بنجاح'))
-  .catch(err => console.log('❌ خطأ في MongoDB:', err));
+  .then(() => console.log('✅ MongoDB Connected Successfully'))
+  .catch(err => console.log('❌ MongoDB Error:', err));
 
 /* ======================
-   USER MODEL
+   MODEL
 ====================== */
 
 const userSchema = new mongoose.Schema({
@@ -39,26 +35,20 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 
 /* ======================
-   TEST ROUTE
+   ROUTES
 ====================== */
 
 app.get('/', (req, res) => {
   res.send('🚀 SNOWCHAT SERVER IS RUNNING');
 });
 
-/* ======================
-   REGISTER ROUTE
-====================== */
-
 app.post('/api/register', async (req, res) => {
-
   try {
 
-    console.log("📩 Request Body:", req.body);
+    console.log("📩 DATA:", req.body);
 
     const { username, password } = req.body;
 
-    // تحقق من البيانات
     if (!username || !password) {
       return res.status(400).json({
         success: false,
@@ -66,33 +56,28 @@ app.post('/api/register', async (req, res) => {
       });
     }
 
-    // تحقق من التكرار
-    const userExists = await User.findOne({ username });
+    const exists = await User.findOne({ username });
 
-    if (userExists) {
+    if (exists) {
       return res.status(400).json({
         success: false,
-        message: "اسم المستخدم موجود مسبقاً"
+        message: "اسم المستخدم مستخدم"
       });
     }
 
-    // إنشاء المستخدم
-    const newUser = new User({ username, password });
-    await newUser.save();
+    await new User({ username, password }).save();
 
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
       message: "تم إنشاء الحساب بنجاح"
     });
 
-  } catch (error) {
+  } catch (err) {
+    console.log("❌ ERROR:", err);
 
-    // 🔴 مهم جداً لمعرفة المشكلة الحقيقية
-    console.log("❌ SERVER ERROR:", error);
-
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: error.message
+      message: err.message
     });
   }
 });
