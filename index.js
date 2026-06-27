@@ -1,129 +1,158 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const SECRET = "snowchat_secret_key";
+
 app.use(cors());
 app.use(express.json());
 
-/*
-ضع كلمة مرور MongoDB مكان YOUR_PASSWORD
-
-مثال:
-mongodb+srv://mlhmayhab02_db_user:YOUR_PASSWORD@cluster0.gga5zue.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
-*/
+/* ================== MONGO ================== */
 
 const mongoURI =
 "mongodb+srv://mlhmayhab02_db_user:miPbzmZrX7G1HEO7@cluster0.gga5zue.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
 mongoose.connect(mongoURI)
-.then(() => {
-    console.log("✅ MongoDB Connected Successfully");
-})
-.catch((err) => {
-    console.log("❌ MongoDB Error:", err);
-});
+.then(() => console.log("✅ MongoDB Connected"))
+.catch(err => console.log("❌ Mongo Error:", err));
+
+/* ================== USER MODEL ================== */
 
 const userSchema = new mongoose.Schema({
-    username:{
-        type:String,
-        required:true,
-        unique:true
-    },
-    password:{
-        type:String,
-        required:true
-    }
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+
+    // 🔥 بيانات البروفايل
+    name: { type: String, default: "User Account" },
+    avatar: { type: String, default: "" }
 });
 
 const User = mongoose.model("User", userSchema);
 
-app.get("/", (req,res)=>{
+/* ================== AUTH MIDDLEWARE ================== */
+
+function auth(req, res, next) {
+    const header = req.headers.authorization;
+
+    if (!header) {
+        return res.status(401).json({ message: "No token" });
+    }
+
+    try {
+        const token = header.split(" ")[1];
+        const decoded = jwt.verify(token, SECRET);
+        req.user = decoded;
+        next();
+    } catch (err) {
+        return res.status(401).json({ message: "Invalid token" });
+    }
+}
+
+/* ================== HOME ================== */
+
+app.get("/", (req, res) => {
     res.send("SNOWCHAT SERVER WORKING");
 });
 
-/* ================= REGISTER ================= */
+/* ================== REGISTER ================== */
 
-app.post("/api/register", async(req,res)=>{
+app.post("/api/register", async (req, res) => {
+    try {
+        const { username, password } = req.body;
 
-    try{
+        const exists = await User.findOne({ username });
 
-        const {username,password}=req.body;
-
-        const exists=await User.findOne({username});
-
-        if(exists){
+        if (exists) {
             return res.json({
-                success:false,
-                message:"اسم المستخدم موجود مسبقاً"
+                success: false,
+                message: "اسم المستخدم موجود"
             });
         }
 
-        const user=new User({
-            username,
-            password
-        });
-
+        const user = new User({ username, password });
         await user.save();
 
         res.json({
-            success:true,
-            message:"تم إنشاء الحساب بنجاح"
+            success: true,
+            message: "تم إنشاء الحساب"
         });
 
-    }catch(err){
-
-        console.log(err);
-
+    } catch (err) {
         res.status(500).json({
-            success:false,
-            message:"حدث خطأ في السيرفر"
+            success: false,
+            message: "Server Error"
         });
-
     }
-
 });
 
-/* ================= LOGIN ================= */
+/* ================== LOGIN ================== */
 
-app.post("/api/login", async(req,res)=>{
+app.post("/api/login", async (req, res) => {
+    try {
+        const { username, password } = req.body;
 
-    try{
+        const user = await User.findOne({ username, password });
 
-        const {username,password}=req.body;
-
-        const user=await User.findOne({
-            username,
-            password
-        });
-
-        if(!user){
+        if (!user) {
             return res.json({
-                success:false,
-                message:"ليس لديك حساب"
+                success: false,
+                message: "خطأ في البيانات"
             });
         }
 
+        const token = jwt.sign(
+            { id: user._id },
+            SECRET,
+            { expiresIn: "7d" }
+        );
+
         res.json({
-            success:true,
-            message:"تم تسجيل الدخول"
+            success: true,
+            message: "تم تسجيل الدخول",
+            token
         });
 
-    }catch(err){
-
-        console.log(err);
-
+    } catch (err) {
         res.status(500).json({
-            success:false,
-            message:"حدث خطأ في السيرفر"
+            success: false,
+            message: "Server Error"
         });
-
     }
-
 });
 
-app.listen(PORT,()=>{
+/* ================== GET USER ================== */
+
+app.get("/api/me", auth, async (req, res) => {
+    const user = await User.findById(req.user.id);
+    res.json(user);
+});
+
+/* ================== UPDATE NAME ================== */
+
+app.post("/api/update-name", auth, async (req, res) => {
+    const { name } = req.body;
+
+    await User.findByIdAndUpdate(req.user.id, { name });
+
+    res.json({ success: true });
+});
+
+/* ================== UPDATE AVATAR ================== */
+
+app.post("/api/update-avatar", auth, async (req, res) => {
+    const { avatar } = req.body;
+
+    await User.findByIdAndUpdate(req.user.id, { avatar });
+
+    res.json({ success: true });
+});
+
+/* ================== START ================== */
+
+app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
